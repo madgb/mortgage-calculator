@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mortgage Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h2 {
+      text-align: center;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      margin-top: 10px;
+    }
+    input[type="number"] {
+      padding: 10px;
+      margin-top: 5px;
+      font-size: 1em;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 20px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+
+    /* Mobile Optimization */
+    @media (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+      input[type="number"], button {
+        font-size: 1em;
+        padding: 10px;
+      }
+      table, th, td {
+        font-size: 0.9em;
+        padding: 6px;
+      }
+    }
+  </style>
+  <script>
+    function fcnAmountPerPeriod(a_intInterestRate, a_intCompoundingPeriods, a_intPrincipal, a_intTerms) {
+      var intAnnualInterestRate = Math.pow((1 + a_intInterestRate / a_intCompoundingPeriods), a_intCompoundingPeriods) - 1;
+      var intNominalInterestRate = Math.pow((1 + intAnnualInterestRate), 1 / a_intCompoundingPeriods) - 1;
+      var intAmountPerPeriod = a_intPrincipal * intNominalInterestRate * Math.pow((1 + intNominalInterestRate), a_intTerms) / (Math.pow((1 + intNominalInterestRate), a_intTerms) - 1);
+      return intAmountPerPeriod;
+    }
+
+    function formatCommas(number) {
+      return number.toLocaleString();
+    }
+
+    function DisplayValues(APRrate, intCurrentLoan) {
+      function calculateMortgageRates(apr) {
+        const adjustmentFactors = [0.80, 0.85, 0.90, 0.925, 0.95, 1.00];
+        const baseIncrements = [0.012, 0.270, 0.401, 0.461, 0.576, 0.709];
+        var aryRates = new Array(6);
+        for (let i = 0; i < aryRates.length; i++) {
+            aryRates[i] = apr + (baseIncrements[i] * adjustmentFactors[i]);
+        }
+        return aryRates;
+      }
+      
+      var aryRates = calculateMortgageRates(APRrate);
+      aryRates[6] = 360;
+      var creditRanges = ["760-850", "700-759", "680-699", "660-679", "640-659", "620-639"];
+      var results = [];
+
+      for (let intTRange = 0; intTRange < 6; intTRange++) {
+        var dblRate = aryRates[intTRange];
+        var intMonths = aryRates[6];
+        var intTPmt = fcnAmountPerPeriod(dblRate / 100, 12, intCurrentLoan, intMonths);
+        var monthly = "$" + formatCommas(Math.round(intTPmt));
+        var totalInterest = "$" + formatCommas(Math.round((intTPmt * intMonths) - intCurrentLoan));
+
+        results.push({
+          "Credit Range": creditRanges[intTRange],
+          "Monthly Payment": monthly,
+          "Total Interest": totalInterest
+        });
+      }
+
+      var outputTable = document.getElementById("output");
+      outputTable.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Credit Range</th><th>Monthly Payment</th><th>Total Interest</th></tr>
+          </thead>
+          <tbody>
+            ${results.map(row => `<tr><td>${row["Credit Range"]}</td><td>${row["Monthly Payment"]}</td><td>${row["Total Interest"]}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      var APRrate = parseFloat(document.getElementById("aprRate").value);
+      var intCurrentLoan = parseFloat(document.getElementById("loanAmount").value);
+      DisplayValues(APRrate, intCurrentLoan);
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h2>30-Year Fixed Mortgage Calculator</h2>
+    <form onsubmit="handleSubmit(event)">
+      <label for="aprRate">APR Rate (%):</label>
+      <input type="number" id="aprRate" step="0.01" placeholder="e.g., 6.5" required><br><br>
+      <label for="loanAmount">Loan Amount ($):</label>
+      <input type="number" id="loanAmount" step="1000" placeholder="e.g., 570000" required><br><br>
+      <button type="submit">Calculate</button>
+    </form>
+    <div id="output"></div>
+  </div>
+</body>
+</html>
